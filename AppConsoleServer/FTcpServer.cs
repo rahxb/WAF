@@ -15,10 +15,17 @@ namespace WAF.AppConsoleServer
 
     public class FTcpServer
     {
+        Log _log;
+
         int _localport = 1000;
         TcpListener _listener;
         Dictionary<string, FTcpClient> _clients = new Dictionary<string, FTcpClient>();
-        
+    
+        public FTcpServer()
+        {
+            _log = new Log("Server");
+        }
+
         public void listen(int port)
         {
             _listener = new TcpListener(IPAddress.Any, port);
@@ -72,7 +79,7 @@ namespace WAF.AppConsoleServer
                 if (object.ReferenceEquals(c.Value, sender))
                     name = c.Key;
             string str = FString.DataToString(e.data);
-            System.Diagnostics.Debug.WriteLine(string.Format("受信 ({0}) : {1}", name, str));
+            _log.WriteLine("", string.Format("受信 ({0}) : {1}", name, str));
 
             ((FTcpClient)sender).SendData(FString.DataToByteArray("hello"));
         }

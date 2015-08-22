@@ -9,31 +9,39 @@ namespace WAF.LibCommon
 {
     public class Log
     {
-        private StreamWriter _stream;
+        private string _logname = "untitled";
 
-        public Log(Stream s)
+        public Log(string logname)
         {
-            _stream = new StreamWriter(s);
+            if (string.IsNullOrWhiteSpace(logname) == false)
+                _logname = logname;
         }
 
         private void Write(string strEventName, string strMessage)
         {
-            string str = string.Format("{0}\t{1}\t{2}"
-                , DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")
-                , strEventName
-                , strMessage
-                );
-            _stream.Write(str);
+            try
+            {
+                string str = string.Format("{0}\t{1}\t{2}"
+                    , DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")
+                    , strEventName
+                    , strMessage
+                    );
+                File.AppendText(str);
+            }
+            catch (Exception ex)
+            {
+                throw new NotImplementedException(ex.Message);
+            }
         }
 
         public void WriteLine(string strEventName, string strMessage)
         {
-            Write(strEventName, strMessage);
+            Write(strEventName, strMessage + "\r\n");
         }
 
         public void Write(string strMessage)
         {
-            Write("", strMessage);
+            Write("", strMessage + "\r\n");
         }
 
     }
