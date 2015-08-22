@@ -15,7 +15,7 @@ namespace WAF.AppConsoleServer
 
     public class FTcpServer
     {
-        Log _log;
+        Log _log = new Log("Server");
 
         int _localport = 1000;
         TcpListener _listener;
@@ -23,7 +23,8 @@ namespace WAF.AppConsoleServer
     
         public FTcpServer()
         {
-            _log = new Log("Server");
+            // 
+
         }
 
         public void listen(int port)

@@ -16,6 +16,8 @@ namespace WAF.AppWindowClient
 {
     public partial class WinClient : Form
     {
+        Log _log = new Log("Client");
+
         TcpClient cl;
 
         public WinClient()
@@ -41,7 +43,7 @@ namespace WAF.AppWindowClient
 
         private void c_ReceiveData(object sender, FTcpClient.RecvEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("Client : " + FString.DataToString(e.data));
+            _log.WriteLine("Client - ReceivedData", FString.DataToString(e.data));
         }
 
         private void button2_Click(object sender, EventArgs e)
