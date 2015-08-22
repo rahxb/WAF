@@ -12,6 +12,14 @@ using WAF.LibCommon;
 
 namespace WAF.AppConsoleServer
 {
+    // 
+    // 送信コマンドの例
+    // 
+    //             タブ　　Base64エンコード文字列　改行
+    //               ↓　　　　↓　　　　　　　　　　↓
+    // PUBLIC-MESSAGE  MESSAGE:
+    // 
+
 
     public class FTcpServer
     {
