@@ -32,7 +32,7 @@ namespace WAF.AppWindowClient
         private void button1_Click(object sender, EventArgs e)
         {
             cl = new TcpClient();
-            cl.Connect("localhost", 2000);
+            cl.Connect("localhost", 1000);
             FTcpClient c = new FTcpClient(cl);
             c.ReceiveData += c_ReceiveData;
             c.StartReceive();
