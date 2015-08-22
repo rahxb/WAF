@@ -10,7 +10,7 @@ using System.Windows.Forms;
 using System.Net;
 using System.Net.Sockets;
 
-using LibCommon;
+using WAF.LibCommon;
 
 namespace WAF.AppWindowClient
 {

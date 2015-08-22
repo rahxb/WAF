@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Sockets;
 
 using WAF.AppWindowClient;
+using WAF.LibCommon;
 
 namespace WAF.AppConsoleServer
 {
@@ -70,10 +71,10 @@ namespace WAF.AppConsoleServer
             foreach (KeyValuePair<string, FTcpClient> c in _clients)
                 if (object.ReferenceEquals(c.Value, sender))
                     name = c.Key;
-            string str = FTcpClient.DataToString(e.data);
+            string str = FString.DataToString(e.data);
             System.Diagnostics.Debug.WriteLine(string.Format("受信 ({0}) : {1}", name, str));
 
-            ((FTcpClient)sender).SendData(FTcpClient.DataToByteArray("hello"));
+            ((FTcpClient)sender).SendData(FString.DataToByteArray("hello"));
         }
 
 
