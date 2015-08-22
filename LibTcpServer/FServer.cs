@@ -7,13 +7,15 @@ using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
 
-namespace WAF
+using WAF.LibTcpClient;
+
+namespace WAF.LibTcpServer
 {
 
-    class FServer
+    public class FTcpServer
     {
         TcpListener _listener;
-        Dictionary<string, FClient> _clients = new Dictionary<string, FClient>();
+        Dictionary<string, FTcpClient> _clients = new Dictionary<string, FTcpClient>();
         
         public void listen(int port)
         {
@@ -21,10 +23,10 @@ namespace WAF
             _listener.Start();
 
             Task.Factory.StartNew(() => accept());
-            WinClient c = new WinClient();
+            FTcpClient c = new FTcpClient();
             c.Show();
 
-            WinClient c2 = new WinClient();
+            FTcpClient c2 = new FTcpClient();
             c2.Show();
 
             
@@ -36,14 +38,14 @@ namespace WAF
             {
                 System.Threading.Thread.Sleep(1);
 
-                FClient c = new FClient(await _listener.AcceptTcpClientAsync());
+                FTcpClient c = new FTcpClient(await _listener.AcceptTcpClientAsync());
                 clientInit(c);
                 c.StartReceive();
             }
         }
 
         int _ClientID = 0;
-        void clientInit(FClient c)
+        void clientInit(FTcpClient c)
         {
             c.ReceiveData += c_ReceiveData;
 
@@ -52,16 +54,16 @@ namespace WAF
         }
 
 
-        private void c_ReceiveData(object sender, FClient.RecvEventArgs e)
+        private void c_ReceiveData(object sender, FTcpClient.RecvEventArgs e)
         {
             string name = "";
-            foreach (KeyValuePair<string, FClient> c in _clients)
+            foreach (KeyValuePair<string, FTcpClient> c in _clients)
                 if (object.ReferenceEquals(c.Value, sender))
                     name = c.Key;
-            string str = FClient.DataToString(e.data);
+            string str = FTcpClient.DataToString(e.data);
             System.Diagnostics.Debug.WriteLine(string.Format("受信 ({0}) : {1}", name, str));
 
-            ((FClient)sender).SendData(FClient.DataToByteArray("hello"));
+            ((FTcpClient)sender).SendData(FTcpClient.DataToByteArray("hello"));
         }
 
 

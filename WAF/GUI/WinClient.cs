@@ -10,7 +10,7 @@ using System.Windows.Forms;
 using System.Net;
 using System.Net.Sockets;
 
-namespace WAF
+namespace WAF.AppWindowClient
 {
     public partial class WinClient : Form
     {
@@ -29,7 +29,7 @@ namespace WAF
         {
             cl = new TcpClient();
             cl.Connect("localhost", 2000);
-            FClient c = new FClient(cl);
+            FTcpClient c = new FTcpClient(cl);
             c.ReceiveData += c_ReceiveData;
             c.StartReceive();
 
@@ -37,16 +37,16 @@ namespace WAF
             button2.Enabled = true;
         }
 
-        private void c_ReceiveData(object sender, FClient.RecvEventArgs e)
+        private void c_ReceiveData(object sender, FTcpClient.RecvEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("Client : " + FClient.DataToString(e.data));
+            System.Diagnostics.Debug.WriteLine("Client : " + FTcpClient.DataToString(e.data));
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
             button2.Enabled = false;
 
-            byte[] bin = FClient.DataToByteArray(textBox1.Text);
+            byte[] bin = FTcpClient.DataToByteArray(textBox1.Text);
             cl.GetStream().Write(bin, 0, bin.Length);
 
             button2.Enabled = true;

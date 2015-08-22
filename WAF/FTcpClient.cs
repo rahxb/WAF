@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
 
-namespace WAF
+namespace WAF.AppWindowClient
 {
-    class FClient
+    public class FTcpClient
     {
 
         #region RecvDataイベント発生用
@@ -33,7 +33,12 @@ namespace WAF
 
         TcpClient _client = null;
 
-        public FClient(TcpClient c)
+        public FTcpClient()
+        {
+            //
+        }
+
+        public FTcpClient(TcpClient c)
         {
             _client = c;
         }

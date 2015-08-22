@@ -1,4 +1,4 @@
-﻿namespace WAF
+﻿namespace WAF.AppWindowClient
 {
     partial class WinClient
     {

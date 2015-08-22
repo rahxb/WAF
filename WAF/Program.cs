@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace WAF
+namespace WAF.AppWindowClient
 {
     static class Program
     {
@@ -17,7 +17,7 @@ namespace WAF
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            Application.Run(new WinServer());
+            Application.Run(new WinClient());
         }
     }
 }
