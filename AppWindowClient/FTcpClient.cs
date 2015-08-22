@@ -57,9 +57,10 @@ namespace WAF.AppWindowClient
         /// データを送信する
         /// </summary>
         /// <param name="bin"></param>
-        public async void SendData(byte[] bin)
+        public async void SendDataNewLine(string strData)
         {
-            await _client.GetStream().WriteAsync(bin, 0, bin.Length);
+            byte[] binData = LibCommon.FString.DataToByteArray(strData);
+            await _client.GetStream().WriteAsync(binData, 0, binData.Length);
         }
 
         /// <summary>

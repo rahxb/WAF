@@ -38,6 +38,27 @@ namespace WAF.AppConsoleServer
         int _ConnectionID = 0;
 
 
+        #region Classes
+
+        class TargetNameAndCommandParams
+        {
+            public TargetNameAndCommandParams(string strTargetName, string strCommandParams)
+            {
+                this.TargetName = strTargetName;
+                this.CommandParams = strCommandParams;
+            }
+            public string TargetName { get; set; }
+            public string CommandParams { get; set; }
+        }
+        class SendDataPackage
+        {
+            public List<TargetNameAndCommandParams> Items = new List<TargetNameAndCommandParams>();
+        }
+
+
+        #endregion
+
+
         /// <summary>
         /// FTcpServerコンストラクタ
         /// </summary>
@@ -118,23 +139,225 @@ namespace WAF.AppConsoleServer
         }
 
         /// <summary>
+        /// FTcpClientから接続名を返す
+        /// </summary>
+        /// <param name="CurrentConnection"></param>
+        /// <returns></returns>
+        string GetConnectionFromFTcpClient(FTcpClient CurrentConnection)
+        {
+            string result = null;
+            foreach (KeyValuePair<string, FTcpClient> connection in _connections)
+            {
+                if (object.ReferenceEquals(connection.Value, CurrentConnection))
+                {
+                    result = connection.Key;
+                    break;
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 接続名からFTcpClientを返す
+        /// </summary>
+        /// <param name="strConnectionName"></param>
+        /// <returns></returns>
+        FTcpClient GetConnectionFromName(string strConnectionName)
+        {
+            FTcpClient result = null;
+            foreach (KeyValuePair<string, FTcpClient> connection in _connections)
+            {
+                if (connection.Key == strConnectionName)
+                {
+                    result = connection.Value;
+                    break;
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
         /// クライアントからのデータ受信イベント
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private void connection_ReceiveData(object sender, FTcpClient.RecvEventArgs e)
         {
-            string strConnectionName = "<不明>";
-            foreach (KeyValuePair<string, FTcpClient> connection in _connections)
-                if (object.ReferenceEquals(connection.Value, sender))
-                    strConnectionName = connection.Key;
+            string strConnectionName = GetConnectionFromFTcpClient((FTcpClient)sender);
+            if (strConnectionName == null)
+                strConnectionName = "<不明>";
 
-            string strData = FString.DataToString(e.data);
-            _log.WriteLine(string.Format("受信 ({0}) : {1}", strConnectionName, strData));
+            // ログ
+            string strReceiveData = FString.DataToString(e.data);
+            _log.WriteLine(string.Format("受信 ({0}) : {1}", strConnectionName, strReceiveData));
 
-            ((FTcpClient)sender).SendData(FString.DataToByteArray("hello"));
+            // 受信したデータを元にサーバーで各コマンド処理を行う
+            SendDataPackage sdp = ServerProcess(strReceiveData);
+
+            // クライアントに返信が必要な場合はデータを送信する
+            SendTo(sdp);
+
         }
 
+        class CommandAndParams
+        {
+            public string CommandName { get; set; }
+            public Dictionary<string, string> Params { get; set; }
+        }
+
+        /// <summary>
+        /// 受信したデータを元にサーバーで各コマンド処理を行う
+        /// </summary>
+        /// <param name="strReceiveData"></param>
+        /// <returns></returns>
+        SendDataPackage ServerProcess(string strReceiveData)
+        {
+            // コマンドとパラメータを分割する
+            CommandAndParams cap = GetCommandParams(strReceiveData);
+
+            // サーバーのメイン処理を行う
+            SendDataPackage sdp = ServerProcessSwitch(cap);
+
+            return sdp;
+        }
+
+
+        /// <summary>
+        /// コマンド名とパラメータを分割して返す
+        /// </summary>
+        /// <param name="strReceivedData"></param>
+        /// <returns></returns>
+        CommandAndParams GetCommandParams(string strReceivedData)
+        {
+            CommandAndParams result = new CommandAndParams();
+
+            string[] arNameAndValue = strReceivedData.Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            string strValue = "";
+
+            if (1 <= arNameAndValue.Length)
+                // コマンド名は大小文字の区別をなくすため、強制的に大文字にする
+                result.CommandName = arNameAndValue[0].ToUpper();
+
+            Dictionary<string, string> dicParams = new Dictionary<string, string>();
+            for (int i = 1; i < arNameAndValue.Length; i++)
+            {
+                // ”パラメータ名:パラメータ値”の区切りを分割する
+                string[] arParamNameAndValues = strValue.Split(new char[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
+                // パラメータ名は大小文字の区別をなくすため、強制的に大文字にする
+                string strParamName = arParamNameAndValues[0].ToUpper();
+
+                if (1 == arParamNameAndValues.Length)
+                {
+                    // パラメータ値なしは、
+                    // パラメータ名のみパラメータ辞書に追加する
+                    dicParams.Add(strParamName, "");
+                }
+                else if (2 <= arParamNameAndValues.Length)
+                {
+                    // パラメータをBase64デコードして、パラメータ辞書に追加する
+                    byte[] binValue = System.Text.Encoding.UTF8.GetBytes(arParamNameAndValues[1]);
+                    string strPlainValue = System.Convert.ToBase64String(binValue);
+                    dicParams.Add(strParamName, strPlainValue);
+                }
+            }
+            result.Params = dicParams;
+
+            return result;
+        }
+
+        /// <summary>
+        /// 特定の相手にデータを送信する
+        /// </summary>
+        /// <param name="sdp"></param>
+        void SendTo(SendDataPackage sdp)
+        {
+            foreach (TargetNameAndCommandParams item in sdp.Items)
+            {
+                FTcpClient connection = GetConnectionFromName(item.TargetName);
+                if (connection != null)
+                    connection.SendDataNewLine(item.CommandParams);
+            }
+        }
+
+        /// <summary>
+        /// コマンド処理分岐
+        /// </summary>
+        /// <param name="cap"></param>
+        /// <returns></returns>
+        SendDataPackage ServerProcessSwitch(CommandAndParams cap)
+        {
+            SendDataPackage result = null;
+
+            switch (cap.CommandName)
+            {
+                // ここでのコマンド名は必ず大文字
+                case "PUBLIC-MESSAGE":
+                    result = SPPublicMessage(cap.Params);
+                    break;
+
+                case "PRIVATE-MESSAGE":
+                    result = SPPrivateMessage(cap.Params);
+                    break;
+
+            }
+            return result;
+        }
+
+        
+        /// <summary>
+        /// 全員にメッセージを送信する準備
+        /// </summary>
+        /// <param name="dicParams"></param>
+        /// <returns></returns>
+        SendDataPackage SPPublicMessage(Dictionary<string, string> dicParams)
+        {
+            // フォーマット
+            // PUBLIC-MESSAGE   MESSAGE:メッセージ(B64)
+            //
+            SendDataPackage sdp = new SendDataPackage();
+            foreach (KeyValuePair<string, FTcpClient> connection in _connections)
+                sdp.Items.Add(new TargetNameAndCommandParams(connection.Key, SFPublicMessage(dicParams["MESSAGE"])));
+            return sdp;
+        }
+
+        /// <summary>
+        /// 特定の相手(単数)にのみメッセージを送信する準備
+        /// </summary>
+        /// <param name="dicParams"></param>
+        /// <returns></returns>
+        SendDataPackage SPPrivateMessage(Dictionary<string, string> dicParams)
+        {
+            // フォーマット
+            // PRIVATE-MESSAGE   TARGET-NAME:ID(B64)   MESSAGE:メッセージ(B64)
+            //
+            SendDataPackage sdp = new SendDataPackage();
+            foreach (KeyValuePair<string, FTcpClient> connection in _connections)
+                if (dicParams["TARGET-NAME"] == connection.Key)
+                    sdp.Items.Add(new TargetNameAndCommandParams(connection.Key, SFPrivateMessage(dicParams["MESSAGE"], connection.Key)));
+            return sdp;
+        }
+
+
+        /// <summary>
+        /// コマンド送信用フォーマット(全員にメッセージを送信する)
+        /// </summary>
+        /// <param name="strMessae"></param>
+        /// <returns></returns>
+        string SFPublicMessage(string strMessae)
+        {
+            return string.Format("{0}\tMESSAGE:{1}", "PUBLIC-MESSAGE", strMessae);
+        }
+
+        /// <summary>
+        /// コマンド送信用フォーマット(特定の相手(単数)にのみメッセージを送信する)
+        /// </summary>
+        /// <param name="strMessae"></param>
+        /// <param name="strTargetName"></param>
+        /// <returns></returns>
+        string SFPrivateMessage(string strMessae, string strTargetName)
+        {
+            return string.Format("{0}\tMESSAGE:{1}\tTARGET-NAME:{2}", "PRIVATE-MESSAGE", strMessae, strTargetName);
+        }
 
 
     }
