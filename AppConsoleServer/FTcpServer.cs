@@ -16,11 +16,31 @@ namespace WAF.AppConsoleServer
     public class FTcpServer
     {
         Log _log = new Log("Server");
-        
+
+        /// <summary>
+        /// 接続待受けポート番号
+        /// </summary>
         int _localport = 1000;
+
+        /// <summary>
+        /// 接続待受け
+        /// </summary>
         TcpListener _listener;
-        Dictionary<string, FTcpClient> _clients = new Dictionary<string, FTcpClient>();
-    
+
+        /// <summary>
+        /// 接続保持用辞書
+        /// </summary>
+        Dictionary<string, FTcpClient> _connections = new Dictionary<string, FTcpClient>();
+
+        /// <summary>
+        /// 接続してきたクライアントのID採番用
+        /// </summary>
+        int _ConnectionID = 0;
+
+
+        /// <summary>
+        /// FTcpServerコンストラクタ
+        /// </summary>
         public FTcpServer()
         {
             // 
@@ -28,27 +48,40 @@ namespace WAF.AppConsoleServer
 
         }
 
+        /// <summary>
+        /// FTcpServerデストラクタ
+        /// </summary>
         ~FTcpServer()
         {
             _log.WriteLine("プログラム終了");
         }
 
-
-        public void listen(int port)
+        /// <summary>
+        /// 接続待受けを開始する
+        /// </summary>
+        /// <param name="port"></param>
+        public void Listen(int port)
         {
+            // 接続待受け開始
             _listener = new TcpListener(IPAddress.Any, port);
             _listener.Start();
-
-            // 接続受け待ちの開始
             IsListen = false;
             Task.Factory.StartNew(() => accept());
-
         }
 
+        /// <summary>
+        /// TCPのローカルポートを返す
+        /// </summary>
         public int LocalPort { get { return _localport; } }
 
+        /// <summary>
+        /// 接続待受け状態を返す
+        /// </summary>
         public bool IsListen { get; set; } = false;
 
+        /// <summary>
+        /// 接続待受け処理と
+        /// </summary>
         async void accept()
         {
             while (true)
@@ -62,32 +95,42 @@ namespace WAF.AppConsoleServer
                     IsListen = true;
 
                 // 接続されるまで待機する
-                FTcpClient c = new FTcpClient(await _listener.AcceptTcpClientAsync());
+                FTcpClient connection = new FTcpClient(await _listener.AcceptTcpClientAsync());
 
                 // 接続されたら初期設定を行い、データ受信モードに移行する
-                clientInit(c);
-                c.StartReceive();
+                clientInit(connection);
+                connection.StartReceive();
             }
         }
 
-        int _ClientID = 0;
-        void clientInit(FTcpClient c)
+        /// <summary>
+        /// クライアントが接続してきたあとの初期設定処理
+        /// </summary>
+        /// <param name="connection"></param>
+        void clientInit(FTcpClient connection)
         {
-            c.ReceiveData += c_ReceiveData;
+            // データ受信イベントリスナー設定
+            connection.ReceiveData += connection_ReceiveData;
 
-            _ClientID++;
-            _clients.Add("C" + _ClientID, c);
+            // 接続に名前付け
+            _ConnectionID++;
+            _connections.Add("C" + _ConnectionID, connection);
         }
 
-
-        private void c_ReceiveData(object sender, FTcpClient.RecvEventArgs e)
+        /// <summary>
+        /// クライアントからのデータ受信イベント
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void connection_ReceiveData(object sender, FTcpClient.RecvEventArgs e)
         {
-            string name = "";
-            foreach (KeyValuePair<string, FTcpClient> c in _clients)
-                if (object.ReferenceEquals(c.Value, sender))
-                    name = c.Key;
-            string str = FString.DataToString(e.data);
-            _log.WriteLine( string.Format("受信 ({0}) : {1}", name, str));
+            string strConnectionName = "<不明>";
+            foreach (KeyValuePair<string, FTcpClient> connection in _connections)
+                if (object.ReferenceEquals(connection.Value, sender))
+                    strConnectionName = connection.Key;
+
+            string strData = FString.DataToString(e.data);
+            _log.WriteLine(string.Format("受信 ({0}) : {1}", strConnectionName, strData));
 
             ((FTcpClient)sender).SendData(FString.DataToByteArray("hello"));
         }
