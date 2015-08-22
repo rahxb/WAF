@@ -10,6 +10,8 @@ using System.Windows.Forms;
 using System.Net;
 using System.Net.Sockets;
 
+using LibCommon;
+
 namespace WAF.AppWindowClient
 {
     public partial class WinClient : Form
@@ -39,14 +41,14 @@ namespace WAF.AppWindowClient
 
         private void c_ReceiveData(object sender, FTcpClient.RecvEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("Client : " + FTcpClient.DataToString(e.data));
+            System.Diagnostics.Debug.WriteLine("Client : " + FString.DataToString(e.data));
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
             button2.Enabled = false;
 
-            byte[] bin = FTcpClient.DataToByteArray(textBox1.Text);
+            byte[] bin = FString.DataToByteArray(textBox1.Text);
             cl.GetStream().Write(bin, 0, bin.Length);
 
             button2.Enabled = true;

@@ -55,6 +55,10 @@
       <Project>{a5b2cb4c-69b4-47bd-bb2b-2a339eacaff1}</Project>
       <Name>AppWindowClient</Name>
     </ProjectReference>
+    <ProjectReference Include="..\LibCommon\LibCommon.csproj">
+      <Project>{9c5e1d84-7b59-4f9c-aa70-48232136ce0d}</Project>
+      <Name>LibCommon</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
