@@ -43,7 +43,7 @@ namespace WAF.AppWindowClient
 
         private void c_ReceiveData(object sender, FTcpClient.RecvEventArgs e)
         {
-            _log.WriteLine("Client - ReceivedData", FString.DataToString(e.data));
+            _log.WriteLine(FString.DataToString(e.data));
         }
 
         private void button2_Click(object sender, EventArgs e)

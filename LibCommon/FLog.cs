@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using System.Runtime.CompilerServices;
 
 namespace WAF.LibCommon
 {
@@ -17,16 +18,26 @@ namespace WAF.LibCommon
                 _logname = logname;
         }
 
-        private void Write(string strEventName, string strMessage)
+        
+        public void WriteLine(string strMessage
+            , [CallerFilePath] string strSourceFileName = ""
+            , [CallerLineNumber] int nSourceFileLine = 0
+            , [CallerMemberName] string strMethodName = ""
+            )
         {
             try
             {
-                string str = string.Format("{0}\t{1}\t{2}"
+                string strSrcFileName = Path.GetFileName(strSourceFileName);
+                string strLog = string.Format("{0}\t{1} ({2} line) - {3}()\t{4}\n"
                     , DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")
-                    , strEventName
+                    , strSrcFileName
+                    , nSourceFileLine
+                    , strMethodName
                     , strMessage
                     );
-                File.AppendText(str);
+                string strFile = string.Format("{0}.log", _logname);
+
+                File.AppendAllText(strFile, strLog);
             }
             catch (Exception ex)
             {
@@ -34,15 +45,6 @@ namespace WAF.LibCommon
             }
         }
 
-        public void WriteLine(string strEventName, string strMessage)
-        {
-            Write(strEventName, strMessage + "\r\n");
-        }
-
-        public void Write(string strMessage)
-        {
-            Write("", strMessage + "\r\n");
-        }
 
     }
 }
