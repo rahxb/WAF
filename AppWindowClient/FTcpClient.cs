@@ -51,7 +51,11 @@ namespace WAF.AppWindowClient
             await Task.Factory.StartNew(() => Loop());
         }
 
-
+        public void Close()
+        {
+            if(_client != null)
+                _client.Close();
+        }
 
         /// <summary>
         /// データを送信する
