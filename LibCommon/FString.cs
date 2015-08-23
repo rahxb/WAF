@@ -10,6 +10,27 @@ namespace WAF.LibCommon
     {
 
         /// <summary>
+        /// プレーン文字列をBase64文字列に変換する
+        /// </summary>
+        /// <param name="strPlainText"></param>
+        /// <returns></returns>
+        static public string ToBase64(string strPlainText)
+        {
+            return System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(strPlainText));
+        }
+
+        /// <summary>
+        /// Base64文字列をプレーン文字列に変換する
+        /// </summary>
+        /// <param name="strBase64"></param>
+        /// <returns></returns>
+        static public string FromBase64(string strBase64)
+        {
+            return System.Text.Encoding.UTF8.GetString(System.Convert.FromBase64String(strBase64));
+        }
+
+
+        /// <summary>
         /// バイト配列から文字列に変換する(UTF8)
         /// </summary>
         /// <param name="bin"></param>

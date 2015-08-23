@@ -41,6 +41,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="FLog.cs" />
+    <Compile Include="FProtocolFormat.cs" />
     <Compile Include="FString.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

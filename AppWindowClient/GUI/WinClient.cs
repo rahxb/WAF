@@ -43,14 +43,22 @@ namespace WAF.AppWindowClient
 
         private void c_ReceiveData(object sender, FTcpClient.RecvEventArgs e)
         {
-            _log.WriteLine(FString.DataToString(e.data));
+            recv(e);
+        }
+
+        void recv(FTcpClient.RecvEventArgs e)
+        {
+            if (this.InvokeRequired)
+                this.Invoke(new MethodInvoker(() => { recv(e); }));
+            else
+                textBox2.AppendText(FString.DataToString(e.data) + "\r\n");
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
             button2.Enabled = false;
 
-            byte[] bin = FString.DataToByteArray(textBox1.Text);
+            byte[] bin = FString.DataToByteArray(FProtocolFormat.Message(textBox1.Text) + "\r\n");
             cl.GetStream().Write(bin, 0, bin.Length);
 
             button2.Enabled = true;

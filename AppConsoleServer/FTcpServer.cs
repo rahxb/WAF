@@ -16,11 +16,7 @@ namespace WAF.AppConsoleServer
     public class FTcpServer
     {
         Log _log = new Log("TcpServer");
-
-        /// <summary>
-        /// 接続待受けポート番号
-        /// </summary>
-        int _localport = 1000;
+        
 
         /// <summary>
         /// 接続待受け
@@ -85,10 +81,11 @@ namespace WAF.AppConsoleServer
             Task.Factory.StartNew(() => accept());
         }
 
+
         /// <summary>
         /// TCPのローカルポートを返す
         /// </summary>
-        public int LocalPort { get { return _localport; } }
+        public int LocalPort { get; } = 1000;
 
         /// <summary>
         /// 接続待受け状態を返す

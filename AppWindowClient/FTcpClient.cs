@@ -32,12 +32,7 @@ namespace WAF.AppWindowClient
         #endregion
 
         TcpClient _client = null;
-
-        public FTcpClient()
-        {
-            //
-        }
-
+        
         public FTcpClient(TcpClient c)
         {
             _client = c;
@@ -63,7 +58,7 @@ namespace WAF.AppWindowClient
         /// <param name="bin"></param>
         public async void SendDataNewLine(string strData)
         {
-            byte[] binData = LibCommon.FString.DataToByteArray(strData);
+            byte[] binData = LibCommon.FString.DataToByteArray(strData + "\r\n");
             await _client.GetStream().WriteAsync(binData, 0, binData.Length);
         }
 

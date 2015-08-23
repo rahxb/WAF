@@ -9,7 +9,7 @@ using WAF.LibCommon;
 
 namespace WAF.AppConsoleServer
 {
-    class FMainServer
+    public class FMainServer
     {
         Log _log = new Log("MainServer");
 
@@ -32,34 +32,6 @@ namespace WAF.AppConsoleServer
         /// 接続してきたクライアントのID採番用
         /// </summary>
         int _ConnectionID = 0;
-
-
-
-
-
-
-        /// <summary>
-        /// FMainServerのコンストラクタ
-        /// </summary>
-        public FMainServer()
-        {
-            _tcpserver = new FTcpServer();
-            _tcpserver.ConnectionRequest += _tcpserver_ConnectionRequest;
-        }
-
-        /// <summary>
-        /// クライアントから接続があったら初期化設定を行う
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void _tcpserver_ConnectionRequest(object sender, FTcpServer.ConnectionRequestEventArgs e)
-        {
-            // 初期設定を行う
-            clientInit(e.Connection);
-
-            // 接続を拒否しない
-            e.Cancel = false;
-        }
 
 
         #region Classes
@@ -100,6 +72,44 @@ namespace WAF.AppConsoleServer
         #endregion
 
 
+
+
+
+        /// <summary>
+        /// FMainServerのコンストラクタ
+        /// </summary>
+        public FMainServer()
+        {
+            _tcpserver = new FTcpServer();
+            _tcpserver.ConnectionRequest += _tcpserver_ConnectionRequest;
+        }
+
+        public void Start()
+        {
+            _tcpserver.Listen(1000);
+        }
+
+        /// <summary>
+        /// クライアントから接続があったら初期化設定を行う
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void _tcpserver_ConnectionRequest(object sender, FTcpServer.ConnectionRequestEventArgs e)
+        {
+            // 初期設定を行う
+            clientInit(e.Connection);
+
+            // 接続を拒否しない
+            e.Cancel = false;
+        }
+
+
+
+
+        public bool IsListen
+        {
+            get { return _tcpserver.IsListen; }
+        }
 
         /// <summary>
         /// クライアントが接続してきたあとの初期設定処理
@@ -181,14 +191,7 @@ namespace WAF.AppConsoleServer
 
         #endregion
 
-
-
-
-
-
-
-
-
+        
         #region コマンドの基幹処理
 
         /// <summary>
@@ -217,6 +220,7 @@ namespace WAF.AppConsoleServer
         {
             CommandAndParams result = new CommandAndParams();
 
+            strReceivedData = strReceivedData.Replace("\r\n", "");
             string[] arNameAndValue = strReceivedData.Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
             string strValue = "";
 
@@ -228,7 +232,7 @@ namespace WAF.AppConsoleServer
             for (int i = 1; i < arNameAndValue.Length; i++)
             {
                 // ”パラメータ名:パラメータ値”の区切りを分割する
-                string[] arParamNameAndValues = strValue.Split(new char[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
+                string[] arParamNameAndValues = arNameAndValue[i].Split(new char[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
                 // パラメータ名は大小文字の区別をなくすため、強制的に大文字にする
                 string strParamName = arParamNameAndValues[0].ToUpper();
 
@@ -241,9 +245,7 @@ namespace WAF.AppConsoleServer
                 else if (2 <= arParamNameAndValues.Length)
                 {
                     // パラメータをBase64デコードして、パラメータ辞書に追加する
-                    byte[] binValue = System.Text.Encoding.UTF8.GetBytes(arParamNameAndValues[1]);
-                    string strPlainValue = System.Convert.ToBase64String(binValue);
-                    dicParams.Add(strParamName, strPlainValue);
+                    dicParams.Add(strParamName, FString.FromBase64(arParamNameAndValues[1]));
                 }
             }
             result.Params = dicParams;
@@ -266,6 +268,7 @@ namespace WAF.AppConsoleServer
         }
 
         #endregion
+
 
         #region コマンドの分岐(中間)処理
 
@@ -295,20 +298,11 @@ namespace WAF.AppConsoleServer
 
         #endregion
 
+
         #region 各コマンドの末端処理
 
 
 
-        /// <summary>
-        /// コマンド送信用フォーマット(全員にメッセージを送信する)
-        /// </summary>
-        /// <param name="strMessae"></param>
-        /// <returns></returns>
-        string SFPublicMessage(string strMessae)
-        {
-            return string.Format("{0}\tMESSAGE:{1}", "PUBLIC-MESSAGE", strMessae);
-        }
-        
         /// <summary>
          /// 全員にメッセージを送信する準備
          /// </summary>
@@ -321,22 +315,11 @@ namespace WAF.AppConsoleServer
             //
             SendDataPackage sdp = new SendDataPackage();
             foreach (KeyValuePair<string, FTcpClient> connection in _connections)
-                sdp.Items.Add(new TargetNameAndCommandParams(connection.Key, SFPublicMessage(dicParams["MESSAGE"])));
+                sdp.Items.Add(new TargetNameAndCommandParams(connection.Key, FProtocolFormat.Message(dicParams["MESSAGE"])));
             return sdp;
         }
 
 
-
-        /// <summary>
-        /// コマンド送信用フォーマット(特定の相手(単数)にのみメッセージを送信する)
-        /// </summary>
-        /// <param name="strMessae"></param>
-        /// <param name="strTargetName"></param>
-        /// <returns></returns>
-        string SFPrivateMessage(string strMessae, string strTargetName)
-        {
-            return string.Format("{0}\tMESSAGE:{1}\tTARGET-NAME:{2}", "PRIVATE-MESSAGE", strMessae, strTargetName);
-        }
 
         /// <summary>
         /// 特定の相手(単数)にのみメッセージを送信する準備
@@ -351,7 +334,7 @@ namespace WAF.AppConsoleServer
             SendDataPackage sdp = new SendDataPackage();
             foreach (KeyValuePair<string, FTcpClient> connection in _connections)
                 if (dicParams["TARGET-NAME"] == connection.Key)
-                    sdp.Items.Add(new TargetNameAndCommandParams(connection.Key, SFPrivateMessage(dicParams["MESSAGE"], connection.Key)));
+                    sdp.Items.Add(new TargetNameAndCommandParams(connection.Key, FProtocolFormat.Message(dicParams["MESSAGE"], connection.Key)));
             return sdp;
         }
 
