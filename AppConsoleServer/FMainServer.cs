@@ -37,28 +37,7 @@ namespace WAF.AppConsoleServer
         #region Classes
 
 
-        /// <summary>
-        /// コマンド名とパラメータ(複数)を格納するクラス
-        /// </summary>
-        class CommandAndParams
-        {
-            public string CommandName { get; set; }
-            public Dictionary<string, string> Params { get; set; }
-        }
 
-        /// <summary>
-        /// 特定の相手にデータ送信するときのコマンドとパラメータ格納クラス
-        /// </summary>
-        class TargetNameAndCommandParams
-        {
-            public TargetNameAndCommandParams(string strTargetName, string strCommandParams)
-            {
-                this.TargetName = strTargetName;
-                this.CommandParams = strCommandParams;
-            }
-            public string TargetName { get; set; }
-            public string CommandParams { get; set; }
-        }
 
         /// <summary>
         /// データ送信のデータ格納クラス
@@ -68,6 +47,19 @@ namespace WAF.AppConsoleServer
             public List<TargetNameAndCommandParams> Items = new List<TargetNameAndCommandParams>();
         }
 
+        /// <summary>
+        /// 特定の相手にデータ送信するときのコマンドとパラメータ格納クラス
+        /// </summary>
+        class TargetNameAndCommandParams
+        {
+            public TargetNameAndCommandParams(string strToName, string strCommandParams)
+            {
+                this.ToName = strToName;
+                this.CommandParams = strCommandParams;
+            }
+            public string ToName { get; set; }
+            public string CommandParams { get; set; }
+        }
 
         #endregion
 
@@ -142,7 +134,7 @@ namespace WAF.AppConsoleServer
             _log.WriteLine(string.Format("受信 ({0}) : {1}", strConnectionName, strReceiveData));
 
             // 受信したデータを元にサーバーで各コマンド処理を行う
-            SendDataPackage sdp = ServerProcess(strReceiveData);
+            SendDataPackage sdp = ServerProcess(strConnectionName, strReceiveData);
 
             // クライアントに返信が必要な場合はデータを送信する
             SendTo(sdp);
@@ -199,10 +191,13 @@ namespace WAF.AppConsoleServer
         /// </summary>
         /// <param name="strReceiveData"></param>
         /// <returns></returns>
-        SendDataPackage ServerProcess(string strReceiveData)
+        SendDataPackage ServerProcess(string strConnectionName, string strReceiveData)
         {
             // コマンドとパラメータを分割する
-            CommandAndParams cap = GetCommandParams(strReceiveData);
+            FProtocolFormat.CommandAndParams cap = FProtocolFormat.GetCommandParams(strReceiveData);
+
+            // コマンドの送り元を付加する
+            cap.Params.Add("FROM-NAME", FString.ToBase64(strConnectionName));
 
             // サーバーのメイン処理を行う
             SendDataPackage sdp = ServerProcessSwitch(cap);
@@ -212,48 +207,6 @@ namespace WAF.AppConsoleServer
 
 
         /// <summary>
-        /// コマンド名とパラメータを分割して返す
-        /// </summary>
-        /// <param name="strReceivedData"></param>
-        /// <returns></returns>
-        CommandAndParams GetCommandParams(string strReceivedData)
-        {
-            CommandAndParams result = new CommandAndParams();
-
-            strReceivedData = strReceivedData.Replace("\r\n", "");
-            string[] arNameAndValue = strReceivedData.Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
-            string strValue = "";
-
-            if (1 <= arNameAndValue.Length)
-                // コマンド名は大小文字の区別をなくすため、強制的に大文字にする
-                result.CommandName = arNameAndValue[0].ToUpper();
-
-            Dictionary<string, string> dicParams = new Dictionary<string, string>();
-            for (int i = 1; i < arNameAndValue.Length; i++)
-            {
-                // ”パラメータ名:パラメータ値”の区切りを分割する
-                string[] arParamNameAndValues = arNameAndValue[i].Split(new char[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
-                // パラメータ名は大小文字の区別をなくすため、強制的に大文字にする
-                string strParamName = arParamNameAndValues[0].ToUpper();
-
-                if (1 == arParamNameAndValues.Length)
-                {
-                    // パラメータ値なしは、
-                    // パラメータ名のみパラメータ辞書に追加する
-                    dicParams.Add(strParamName, "");
-                }
-                else if (2 <= arParamNameAndValues.Length)
-                {
-                    // パラメータをBase64デコードして、パラメータ辞書に追加する
-                    dicParams.Add(strParamName, FString.FromBase64(arParamNameAndValues[1]));
-                }
-            }
-            result.Params = dicParams;
-
-            return result;
-        }
-
-        /// <summary>
         /// 特定の相手にデータを送信する
         /// </summary>
         /// <param name="sdp"></param>
@@ -261,7 +214,7 @@ namespace WAF.AppConsoleServer
         {
             foreach (TargetNameAndCommandParams item in sdp.Items)
             {
-                FTcpClient connection = GetConnectionFromName(item.TargetName);
+                FTcpClient connection = GetConnectionFromName(item.ToName);
                 if (connection != null)
                     connection.SendDataNewLine(item.CommandParams);
             }
@@ -277,7 +230,7 @@ namespace WAF.AppConsoleServer
         /// </summary>
         /// <param name="cap"></param>
         /// <returns></returns>
-        SendDataPackage ServerProcessSwitch(CommandAndParams cap)
+        SendDataPackage ServerProcessSwitch(FProtocolFormat.CommandAndParams cap)
         {
             SendDataPackage result = null;
 
@@ -307,6 +260,7 @@ namespace WAF.AppConsoleServer
          /// 全員にメッセージを送信する準備
          /// </summary>
          /// <param name="dicParams"></param>
+         /// <param name="strFromName"></param>
          /// <returns></returns>
         SendDataPackage SPPublicMessage(Dictionary<string, string> dicParams)
         {
@@ -315,7 +269,14 @@ namespace WAF.AppConsoleServer
             //
             SendDataPackage sdp = new SendDataPackage();
             foreach (KeyValuePair<string, FTcpClient> connection in _connections)
-                sdp.Items.Add(new TargetNameAndCommandParams(connection.Key, FProtocolFormat.Message(dicParams["MESSAGE"])));
+                sdp.Items.Add(new TargetNameAndCommandParams(
+                      connection.Key
+                    , FProtocolFormat.ServerMessage
+                        (
+                          dicParams["MESSAGE"]
+                        , dicParams["FROM-NAME"]
+                        )
+                    ));
             return sdp;
         }
 
@@ -325,16 +286,24 @@ namespace WAF.AppConsoleServer
         /// 特定の相手(単数)にのみメッセージを送信する準備
         /// </summary>
         /// <param name="dicParams"></param>
+        /// <param name="strFromName"></param>
         /// <returns></returns>
         SendDataPackage SPPrivateMessage(Dictionary<string, string> dicParams)
         {
             // フォーマット
-            // PRIVATE-MESSAGE   TARGET-NAME:ID(B64)   MESSAGE:メッセージ(B64)
+            // PRIVATE-MESSAGE   TO-NAME:ID(B64)   MESSAGE:メッセージ(B64)
             //
             SendDataPackage sdp = new SendDataPackage();
             foreach (KeyValuePair<string, FTcpClient> connection in _connections)
-                if (dicParams["TARGET-NAME"] == connection.Key)
-                    sdp.Items.Add(new TargetNameAndCommandParams(connection.Key, FProtocolFormat.Message(dicParams["MESSAGE"], connection.Key)));
+                if (dicParams["TO-NAME"] == connection.Key)
+                    sdp.Items.Add(new TargetNameAndCommandParams(
+                          connection.Key
+                        , FProtocolFormat.ServerMessage
+                            (
+                              dicParams["MESSAGE"]
+                            , dicParams["FROM-NAME"]
+                            )
+                        ));
             return sdp;
         }
 

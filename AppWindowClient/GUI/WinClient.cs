@@ -41,6 +41,16 @@ namespace WAF.AppWindowClient
             button2.Enabled = true;
         }
 
+        private void button2_Click(object sender, EventArgs e)
+        {
+            button2.Enabled = false;
+
+            byte[] bin = FString.DataToByteArray(FProtocolFormat.ClientMessage(textBox1.Text) + "\r\n");
+            cl.GetStream().Write(bin, 0, bin.Length);
+
+            button2.Enabled = true;
+        }
+
         private void c_ReceiveData(object sender, FTcpClient.RecvEventArgs e)
         {
             recv(e);
@@ -49,20 +59,20 @@ namespace WAF.AppWindowClient
         void recv(FTcpClient.RecvEventArgs e)
         {
             if (this.InvokeRequired)
+                // スレッド上であればUIスレッドに再帰
                 this.Invoke(new MethodInvoker(() => { recv(e); }));
             else
-                textBox2.AppendText(FString.DataToString(e.data) + "\r\n");
+            {
+                // テキストボックス
+                FProtocolFormat.CommandAndParams cap = FProtocolFormat.GetCommandParams(FString.DataToString((e.data)));
+                if (cap.CommandName == "PUBLIC-MESSAGE" || cap.CommandName == "PRIVATE-MESSAGE")
+                    textBox2.AppendText(string.Format("{0} : {1}\r\n"
+                        , cap.Params["FROM-NAME"]
+                        , cap.Params["MESSAGE"]
+                        ));
+            }
         }
 
-        private void button2_Click(object sender, EventArgs e)
-        {
-            button2.Enabled = false;
-
-            byte[] bin = FString.DataToByteArray(FProtocolFormat.Message(textBox1.Text) + "\r\n");
-            cl.GetStream().Write(bin, 0, bin.Length);
-
-            button2.Enabled = true;
-        }
 
 
 
