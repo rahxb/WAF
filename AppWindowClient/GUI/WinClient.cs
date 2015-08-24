@@ -20,16 +20,27 @@ namespace WAF.AppWindowClient
 
         TcpClient cl;
 
+
+
+        /// <summary>
+        /// WinClientのコンストラクタ
+        /// </summary>
         public WinClient()
         {
             InitializeComponent();
 
-            button1.Enabled = true;
-            button2.Enabled = false;
+            // ボタン状態を初期化
+            btnConnectToServer.Enabled = true;
+            btnSendDataToServer.Enabled = false;
         }
         
         
-        private void button1_Click(object sender, EventArgs e)
+        /// <summary>
+        /// サーバーに接続するボタンクリックイベント
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnConnectToServer_Click(object sender, EventArgs e)
         {
             cl = new TcpClient();
             cl.Connect("localhost", 1000);
@@ -37,25 +48,44 @@ namespace WAF.AppWindowClient
             c.ReceiveData += c_ReceiveData;
             c.StartReceive();
 
-            button1.Enabled = false;
-            button2.Enabled = true;
+            btnConnectToServer.Enabled = false;
+            btnSendDataToServer.Enabled = true;
         }
 
-        private void button2_Click(object sender, EventArgs e)
+        /// <summary>
+        /// サーバーにデータ送信するボタンクリックイベント
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void btnSendDataToServer_Click(object sender, EventArgs e)
         {
-            button2.Enabled = false;
+            btnSendDataToServer.Enabled = false;
 
-            byte[] bin = FString.DataToByteArray(FProtocolFormat.ClientMessage(textBox1.Text) + "\r\n");
-            cl.GetStream().Write(bin, 0, bin.Length);
+            // 送信データを取得して、テキストボックスを空にする
+            string strSendData = txtSendData.Text;
+            txtSendData.Text = "";
 
-            button2.Enabled = true;
+            // 送信データをサーバーに送信する
+            byte[] bin = FString.DataToByteArray(FProtocolFormat.ClientMessage(strSendData) + "\r\n");
+            await cl.GetStream().WriteAsync(bin, 0, bin.Length);
+
+            btnSendDataToServer.Enabled = true;
         }
 
+        /// <summary>
+        /// サーバーからデータ受信イベント
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void c_ReceiveData(object sender, FTcpClient.RecvEventArgs e)
         {
             recv(e);
         }
 
+        /// <summary>
+        /// データ受信後の処理
+        /// </summary>
+        /// <param name="e"></param>
         void recv(FTcpClient.RecvEventArgs e)
         {
             if (this.InvokeRequired)
@@ -66,7 +96,7 @@ namespace WAF.AppWindowClient
                 // テキストボックス
                 FProtocolFormat.CommandAndParams cap = FProtocolFormat.GetCommandParams(FString.DataToString((e.data)));
                 if (cap.CommandName == "PUBLIC-MESSAGE" || cap.CommandName == "PRIVATE-MESSAGE")
-                    textBox2.AppendText(string.Format("{0} : {1}\r\n"
+                    txtRecvDataList.AppendText(string.Format("{0} : {1}\r\n"
                         , cap.Params["FROM-NAME"]
                         , cap.Params["MESSAGE"]
                         ));
