@@ -87,8 +87,8 @@ namespace WAF.LibCommon
                 + "FROM-NAME:{2}"
 
                 , "PUBLIC-MESSAGE"              // COMMAND
-                , FString.ToBase64(strMessae)   // FROM-NAME
-                , strFromName                   // MESSAGE
+                , FString.ToBase64(strMessae)   // MESSAGE
+                , FString.ToBase64(strFromName) // FROM-NAME
                 );
         }
 
@@ -105,7 +105,7 @@ namespace WAF.LibCommon
                 + "FROM-NAME:{2}"
                 
                 , "PRIVATE-MESSAGE"             // COMMAND
-                , strMessae                     // MESSAGE
+                , FString.ToBase64(strMessae)   // MESSAGE
                 , FString.ToBase64(strToName)   // FROM-NAME
                 );
         }

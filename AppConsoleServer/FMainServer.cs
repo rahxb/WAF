@@ -197,7 +197,7 @@ namespace WAF.AppConsoleServer
             FProtocolFormat.CommandAndParams cap = FProtocolFormat.GetCommandParams(strReceiveData);
 
             // コマンドの送り元を付加する
-            cap.Params.Add("FROM-NAME", FString.ToBase64(strConnectionName));
+            cap.Params.Add("FROM-NAME", strConnectionName);
 
             // サーバーのメイン処理を行う
             SendDataPackage sdp = ServerProcessSwitch(cap);
