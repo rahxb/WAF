@@ -17,6 +17,8 @@ namespace WAF.AppWindowClient
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            WinClient w = new WinClient();
+            w.Show();
             Application.Run(new WinClient());
         }
     }
