@@ -18,8 +18,8 @@ namespace WAF.AppWindowClient
     {
         Log _log = new Log("Client");
 
-        TcpClient cl;
-
+        TcpClient _cl;
+        FTcpClient _tcpClient;
 
 
         /// <summary>
@@ -42,11 +42,11 @@ namespace WAF.AppWindowClient
         /// <param name="e"></param>
         private void btnConnectToServer_Click(object sender, EventArgs e)
         {
-            cl = new TcpClient();
-            cl.Connect("localhost", 1000);
-            FTcpClient c = new FTcpClient(cl);
-            c.ReceiveData += c_ReceiveData;
-            c.StartReceive();
+            _cl = new TcpClient();
+            _cl.Connect("localhost", 1000);
+            _tcpClient = new FTcpClient(_cl);
+            _tcpClient.ReceiveData += _tcpClient_ReceiveData;
+            _tcpClient.StartReceive();
 
             btnConnectToServer.Enabled = false;
             btnSendDataToServer.Enabled = true;
@@ -57,7 +57,7 @@ namespace WAF.AppWindowClient
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void btnSendDataToServer_Click(object sender, EventArgs e)
+        private void btnSendDataToServer_Click(object sender, EventArgs e)
         {
             btnSendDataToServer.Enabled = false;
 
@@ -66,8 +66,7 @@ namespace WAF.AppWindowClient
             txtSendData.Text = "";
 
             // 送信データをサーバーに送信する
-            byte[] bin = FString.DataToByteArray(FProtocolFormat.ClientMessage(strSendData) + "\r\n");
-            await cl.GetStream().WriteAsync(bin, 0, bin.Length);
+            _tcpClient.SendData(FProtocolFormat.ClientMessage(strSendData) + "\n" + "aaaaA");
 
             btnSendDataToServer.Enabled = true;
         }
@@ -77,7 +76,7 @@ namespace WAF.AppWindowClient
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void c_ReceiveData(object sender, FTcpClient.RecvEventArgs e)
+        private void _tcpClient_ReceiveData(object sender, FTcpClient.RecvEventArgs e)
         {
             recv(e);
         }

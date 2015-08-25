@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 using System.Net;
 using System.Net.Sockets;
+using WAF.LibCommon;
+using System.IO;
 
 namespace WAF.AppWindowClient
 {
@@ -56,43 +58,92 @@ namespace WAF.AppWindowClient
         /// データを送信する
         /// </summary>
         /// <param name="bin"></param>
-        public async void SendDataNewLine(string strData)
+        public void SendDataNewLine(string strData)
         {
-            byte[] binData = LibCommon.FString.DataToByteArray(strData + "\r\n");
+            SendData(strData + "\n");
+        }
+        public async void SendData(string strData)
+        {
+            byte[] binData = FString.DataToByteArray(strData);
             await _client.GetStream().WriteAsync(binData, 0, binData.Length);
         }
-
         /// <summary>
         /// 受信処理を行う
         /// </summary>
         public async void Loop()
         {
-            System.IO.MemoryStream mem = new System.IO.MemoryStream();
+            MemoryStream memTemp = new MemoryStream();
+            MemoryStream memBuffer = new MemoryStream();
             byte[] binReadBuffer = new byte[1024];
+
             while (true)
             {
                 try
                 {
+                    // 無限ループのためCPU負荷軽減のため 1ms 待機
                     System.Threading.Thread.Sleep(1);
 
                     // 非同期でデータを受信する
-                    int readbytes = await _client.GetStream().ReadAsync(binReadBuffer, 0, binReadBuffer.Length);
-                    if (0 < readbytes)
-                    {
-                        // 受信バッファのデータを整形する
-                        mem.Seek(0, System.IO.SeekOrigin.Begin);
-                        mem.Write(binReadBuffer, 0, readbytes);
-                        byte[] binData = mem.ToArray();
-                        mem.SetLength(0);
+                    int nReadbytes = await _client.GetStream().ReadAsync(binReadBuffer, 0, binReadBuffer.Length);
+                    
+                    // 直前の余りデータの後に受信データを追加する（バッファに受信データを追加）
+                    memBuffer.Write(binReadBuffer, 0, nReadbytes);
+                    binReadBuffer = memBuffer.ToArray();
+                    nReadbytes = binReadBuffer.Length;
 
-                        // 受信イベントを発生する
-                        RiseEvent_ReceiveData(binData);
+                    // binReadBuffer配列にデータがあるため
+                    // バッファが不要となり空にする
+                    FToolKit.ClearMemoryStream(memBuffer);
+
+                    // 受信データ＋バッファデータのサイズが1以上なら次の処理
+                    if (0 < nReadbytes)
+                    {
+
+                        // 改行で終わってない場合はデータを繰り越す(前処理)
+                        int nStartIndex = 0;
+                        int nCount = 0;
+                        for (int i = 0; i < nReadbytes; i++)
+                        {
+                            nCount++;
+                            if (binReadBuffer[i] == '\n')
+                            {
+
+                                // 取得開始位置と取得終了位置（改行まで）のバイト配列を取得する
+                                memTemp.Write(binReadBuffer, nStartIndex, nCount);
+                                byte[] binData = memTemp.ToArray();
+                                FToolKit.ClearMemoryStream(memTemp);
+
+                                // 次の開始位置を設定し、カウントも0にリセットする
+                                nStartIndex = i + 1;
+                                nCount = 0;
+
+                                // 受信イベントを発生する
+                                RiseEvent_ReceiveData(binData);
+                            }
+                        }
+
+                        if (nStartIndex == 0)
+                        {
+                            // 改行がないためすべて余りデータとしてバッファに追加し
+                            // 次回のループに回す
+                            memBuffer.Write(binReadBuffer, 0, nReadbytes);
+                        }
+                        else
+                        {
+                            // 余りデータがあるならバッファに追加して
+                            // 次回ループに回す
+                            if (0 < nCount)
+                                memBuffer.Write(binReadBuffer, nStartIndex, nCount);
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     // 
                     System.Diagnostics.Debug.WriteLine(ex.Message);
+
+                    FToolKit.ClearMemoryStream(memBuffer);
+                    FToolKit.ClearMemoryStream(memTemp);
                 }
             }
         }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Text;
 
 namespace WAF.LibCommon
 {
@@ -16,7 +17,7 @@ namespace WAF.LibCommon
         /// <returns></returns>
         static public string ToBase64(string strPlainText)
         {
-            return System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(strPlainText));
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(strPlainText));
         }
 
         /// <summary>
@@ -26,7 +27,7 @@ namespace WAF.LibCommon
         /// <returns></returns>
         static public string FromBase64(string strBase64)
         {
-            return System.Text.Encoding.UTF8.GetString(System.Convert.FromBase64String(strBase64));
+            return Encoding.UTF8.GetString(Convert.FromBase64String(strBase64));
         }
 
 
@@ -37,7 +38,7 @@ namespace WAF.LibCommon
         /// <returns></returns>
         static public string DataToString(byte[] bin)
         {
-            return System.Text.Encoding.UTF8.GetString(bin);
+            return Encoding.UTF8.GetString(bin);
         }
 
         /// <summary>
@@ -47,7 +48,7 @@ namespace WAF.LibCommon
         /// <returns></returns>
         static public byte[] DataToByteArray(string str)
         {
-            return System.Text.Encoding.UTF8.GetBytes(str);
+            return Encoding.UTF8.GetBytes(str);
         }
 
     }

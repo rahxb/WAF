@@ -43,6 +43,7 @@
     <Compile Include="FLog.cs" />
     <Compile Include="FProtocolFormat.cs" />
     <Compile Include="FString.cs" />
+    <Compile Include="FToolKit.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

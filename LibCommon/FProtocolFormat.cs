@@ -27,7 +27,7 @@ namespace WAF.LibCommon
         {
             CommandAndParams result = new CommandAndParams();
 
-            strReceivedData = strReceivedData.Replace("\r\n", "");
+            strReceivedData = strReceivedData.Replace("\n", "");
             string[] arNameAndValue = strReceivedData.Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
 
             if (1 <= arNameAndValue.Length)
