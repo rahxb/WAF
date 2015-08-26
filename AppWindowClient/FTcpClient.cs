@@ -109,6 +109,7 @@ namespace WAF.AppWindowClient
                             {
 
                                 // 取得開始位置と取得終了位置（改行まで）のバイト配列を取得する
+                                FToolKit.ClearMemoryStream(memTemp);
                                 memTemp.Write(binReadBuffer, nStartIndex, nCount);
                                 byte[] binData = memTemp.ToArray();
                                 FToolKit.ClearMemoryStream(memTemp);
@@ -132,7 +133,7 @@ namespace WAF.AppWindowClient
                         {
                             // 余りデータがあるならバッファに追加して
                             // 次回ループに回す
-                            if (0 < nCount)
+                            if (0 < nCount && nStartIndex + nCount != nReadbytes)
                                 memBuffer.Write(binReadBuffer, nStartIndex, nCount);
                         }
                     }
