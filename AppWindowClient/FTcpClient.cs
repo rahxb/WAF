@@ -31,6 +31,14 @@ namespace WAF.AppWindowClient
             }
         }
 
+        public event EventHandler Closed;
+        void RiseEventClosed()
+        {
+            if (Closed != null)
+            {
+                Closed(this, new EventArgs());
+            }
+        }
         #endregion
 
         TcpClient _client = null;
@@ -38,6 +46,22 @@ namespace WAF.AppWindowClient
         public FTcpClient(TcpClient c)
         {
             _client = c;
+        }
+
+        public bool IsConnected
+        {
+            get
+            {
+                try
+                {
+                    int n = _client.GetStream().ReadByte();
+                    if (n == -1)
+                        return false;
+                    else
+                        return true;
+                }
+                catch { return false; }
+            }
         }
 
         /// <summary>
@@ -52,7 +76,11 @@ namespace WAF.AppWindowClient
         {
             if(_client != null)
                 _client.Close();
+
+            RiseEventClosed();
         }
+
+        public bool IsResponsed { get; set; } = true;
 
         /// <summary>
         /// データを送信する
@@ -65,8 +93,13 @@ namespace WAF.AppWindowClient
         public async void SendData(string strData)
         {
             byte[] binData = FString.DataToByteArray(strData);
-            await _client.GetStream().WriteAsync(binData, 0, binData.Length);
+            if (_client.Connected)
+                await _client.GetStream().WriteAsync(binData, 0, binData.Length);
+            else
+                Close();
+
         }
+
         /// <summary>
         /// 受信処理を行う
         /// </summary>

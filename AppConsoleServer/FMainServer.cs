@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using System.Windows.Forms;
+
 using WAF.AppWindowClient;
 using WAF.LibCommon;
 
@@ -33,6 +35,14 @@ namespace WAF.AppConsoleServer
         /// </summary>
         int _ConnectionID = 0;
 
+
+        /// <summary>
+        /// NOOPを送って一定時間応答がない場合は接続を閉じるミリ秒を指定する
+        /// </summary>
+        const int NOOP_TIMEOUT_MS = 5000;
+
+        System.Threading.Timer _tmrAutoSendNoop;
+        DateTime _dtStartNoop;
 
         #region Classes
 
@@ -64,7 +74,7 @@ namespace WAF.AppConsoleServer
         #endregion
 
 
-
+        
 
 
         /// <summary>
@@ -74,6 +84,39 @@ namespace WAF.AppConsoleServer
         {
             _tcpserver = new FTcpServer();
             _tcpserver.ConnectionRequest += _tcpserver_ConnectionRequest;
+
+            _tmrAutoSendNoop = new System.Threading.Timer(new System.Threading.TimerCallback(_tmrAutoSendNoop_Tick), null, 0, 5000);
+        }
+
+        /// <summary>
+        /// 定期的に全クライアントにNOOPを送信する
+        /// </summary>
+        /// <param name="e"></param>
+        private void _tmrAutoSendNoop_Tick(object e)
+        {
+
+            // NOOPで応答がない(IsResponsed==false)の場合は接続を閉じる
+            List<string> list = new List<string>();
+            foreach (KeyValuePair<string, FTcpClient> c in _connections)
+                list.Add(c.Key);
+            for (int i = 0; i < list.Count; i++)
+            {
+                string key = list[i];
+                FTcpClient c = _connections[key];
+                if (c.IsResponsed == false)
+                {
+                    _connections.Remove(key);
+                    c.Close();
+                    c = null;
+                }
+            }
+
+            _dtStartNoop = DateTime.Now;
+            foreach (KeyValuePair<string, FTcpClient> c in _connections)
+            {
+                c.Value.IsResponsed = false;
+                c.Value.SendDataNewLine("NOOP");
+            }
         }
 
         public void Start()
@@ -243,6 +286,15 @@ namespace WAF.AppConsoleServer
 
                 case "PRIVATE-MESSAGE":
                     result = SPPrivateMessage(cap.Params);
+                    break;
+
+                case "NOOP":
+                    string strFromName = cap.Params["FROM-NAME"];
+                    TimeSpan ts = DateTime.Now - _dtStartNoop;
+                    if (ts.TotalMilliseconds < NOOP_TIMEOUT_MS)
+                    {
+                        _connections[strFromName].IsResponsed = true;
+                    }
                     break;
 
             }
