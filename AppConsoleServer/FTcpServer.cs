@@ -116,13 +116,10 @@ namespace WAF.AppConsoleServer
 
                 // 接続されたら初期設定を行い、データ受信モードに移行する
                 if (cre.Cancel)
-                {
                     cre.Connection.Close();
-                }
                 else
-                {
                     connection.StartReceive();
-                }
+
             }
         }
 

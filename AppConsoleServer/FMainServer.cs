@@ -95,6 +95,14 @@ namespace WAF.AppConsoleServer
         private void _tmrAutoSendNoop_Tick(object e)
         {
 
+            // ここは N4 の処理
+            // ↓
+            // N1.サーバーから全クライアントにNOOP送信
+            // N2.クライアントが受信しさらにサーバーにNOOPを返信
+            // N3.サーバーがNOOP受信しその間の時間を計測、
+            //    一定時間内であればIsResponsedフラグを立てる、
+            // N4.そのフラグを確認しフラグが立っていない場合は接続を閉じる
+            // 
             // NOOPで応答がない(IsResponsed==false)の場合は接続を閉じる
             List<string> list = new List<string>();
             foreach (KeyValuePair<string, FTcpClient> c in _connections)
@@ -111,6 +119,15 @@ namespace WAF.AppConsoleServer
                 }
             }
 
+            // ここは N1 の処理
+            // ↓
+            // N1.サーバーから全クライアントにNOOP送信
+            // N2.クライアントが受信しさらにサーバーにNOOPを返信
+            // N3.サーバーがNOOP受信しその間の時間を計測、
+            //    一定時間内であればIsResponsedフラグを立てる、
+            // N4.そのフラグを確認しフラグが立っていない場合は接続を閉じる
+            //
+            // 全クライアントにNOOPを送信する
             _dtStartNoop = DateTime.Now;
             foreach (KeyValuePair<string, FTcpClient> c in _connections)
             {
@@ -140,7 +157,9 @@ namespace WAF.AppConsoleServer
 
 
 
-
+        /// <summary>
+        /// リスニング中であるか返す
+        /// </summary>
         public bool IsListen
         {
             get { return _tcpserver.IsListen; }
@@ -277,18 +296,36 @@ namespace WAF.AppConsoleServer
         {
             SendDataPackage result = null;
 
+            //
+            // クライアントからのコマンドを処理する
+            //
             switch (cap.CommandName)
             {
                 // ここでのコマンド名は必ず大文字
                 case "PUBLIC-MESSAGE":
+                    // 全体にメッセージを送信する準備をする
                     result = SPPublicMessage(cap.Params);
                     break;
 
                 case "PRIVATE-MESSAGE":
+                    // 特定の相手にメッセージを送信する準備をする
                     result = SPPrivateMessage(cap.Params);
                     break;
 
                 case "NOOP":
+                    // ここは N3 の処理
+                    // ↓
+                    // N1.サーバーから全クライアントにNOOP送信
+                    // N2.クライアントが受信しさらにサーバーにNOOPを返信
+                    // N3.サーバーがNOOP受信しその間の時間を計測、
+                    //    一定時間内であればIsResponsedフラグを立てる、
+                    // N4.そのフラグを確認しフラグが立っていない場合は接続を閉じる
+                    //
+                    // NOOPと送信し、クライアントからNOOPと返ってきた時間を計り、
+                    // 一定の時間内に返ってきたらIsResponsedフラグを立てる
+                    // 
+                    // （この後タイマーイベント(_tmrAutoSendNoop_Tick)でフラグが
+                    //   立っていないものは接続を閉じる）
                     string strFromName = cap.Params["FROM-NAME"];
                     TimeSpan ts = DateTime.Now - _dtStartNoop;
                     if (ts.TotalMilliseconds < NOOP_TIMEOUT_MS)

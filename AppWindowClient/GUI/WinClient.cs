@@ -21,7 +21,14 @@ namespace WAF.AppWindowClient
         TcpClient _cl;
         FTcpClient _tcpClient;
 
+        /// <summary>
+        /// 接続状態を確認するタイマー
+        /// </summary>
         System.Threading.Timer _tmrCheckConnected;
+
+        /// <summary>
+        /// 接続状態の確認間隔（ミリ秒）
+        /// </summary>
         int _CheckConnectedIntervalMS = 5000;
 
 
@@ -39,6 +46,11 @@ namespace WAF.AppWindowClient
             _tmrCheckConnected = new System.Threading.Timer(new System.Threading.TimerCallback(_tmrCheckConnected_Tick), null, 0, _CheckConnectedIntervalMS);
         }
 
+
+        /// <summary>
+        /// 接続が維持されているか確認する
+        /// </summary>
+        /// <param name="e"></param>
         void _tmrCheckConnected_Tick(object e)
         {
             if (_tcpClient != null && _tcpClient.IsConnected == false)
@@ -145,6 +157,15 @@ namespace WAF.AppWindowClient
                         // DEBUG only
                         //System.Threading.Thread.Sleep(6000);
 
+                        // ここは N2 の処理
+                        // ↓
+                        // N1.サーバーから全クライアントにNOOP送信
+                        // N2.クライアントが受信しさらにサーバーにNOOPを返信
+                        // N3.サーバーがNOOP受信しその間の時間を計測、
+                        //    一定時間内であればIsResponsedフラグを立てる、
+                        // N4.そのフラグを確認しフラグが立っていない場合は接続を閉じる
+                        // 
+                        // NOOPでサーバーに返信する
                         c.SendDataNewLine("NOOP");
                         break;
                 }
